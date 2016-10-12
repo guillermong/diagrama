@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+
+<style type="text/css">
+	h4 {font-family: sans-serif;}
+	p {font-family: sans-serif;}
+	a {font-family: sans-serif; text-decoration:none;}
+</style>
+ 
+
+<title>HTML5 Canvas Example - Simple Dragging Objects</title>
+
+ <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script type="text/javascript">
+
+
+$( function() {
+ 
+//JavaScript HTML5 Canvas example by Dan Gries, rectangleworld.com.!!!!!!!!!!!
+
+new_id=5;
+
+var dataset={
+  "nodos": [
+    {
+      "id": 1,"name": "nodo1","position": {"x": 100, "y": 200},"primero": 0
+    },
+    {
+      "id": 2,"name": "nodo2","position": {"x": 230, "y": 270},"primero": 0
+    },
+	{
+      "id": 3,"name": "nodo3","position": {"x": 130, "y": 270},"primero": 0
+    },
+	{
+      "id": 4,"name": "nodo RAIZ","position": {"x": 180, "y": 170},"primero": 1
+    }
+  ]
+}
+
+var data_arrows = {
+  "arrow": [
+    {
+      "from": 1,"to": 2,"namea":"tiene internet?"
+    },
+	 {
+      "from": 2,"to": 1,"namea":"apagar router"
+    },
+	 {
+      "from": 1,"to": 2,"namea":"esperar"
+    },
+	{
+      "from": 1,"to": 1,"namea":"si"
+    },
+	{
+      "from": 3,"to": 1,"namea":"no"
+    }
+  ]
+}
+
+
+window.addEventListener("load", windowLoadHandler, false);
+
+function windowLoadHandler() {
+	var node_diagram = canvasApp();
+}
+
+function canvasApp() {
+
+	var theCanvas = document.getElementById("canvasOne");
+	var context = theCanvas.getContext("2d");
+	//http://stackoverflow.com/questions/3420975/html5-canvas-zooming
+	//ESCALA
+	var scale = 1.0;
+    var scaleMultiplier = 0.8;
+	//NODOS
+	var Nodos;
+	var dragIndex;
+	var dragging;
+	var mouseX;
+	var mouseY;
+	var dragHoldX;
+	var dragHoldY;
+	//TRANSLATE
+	panX = 0;
+	panY = 0;
+	var translatePos = {
+        x: 1,
+        y: 1
+    };
+	var startDragOffset = {};
+	
+	var screen;
+	var isarrow = false;
+	var tmparrow;
+	var tipeselect; // 1 :nodo 2:flecha
+
+	
+	init();
+	
+	function init() {
+	
+		//NODOS pruebas
+		Nodos = [];
+		makeNodos();
+		drawScreen();
+		
+		theCanvas.addEventListener("mousedown", mouseDownListener, false);
+		theCanvas.addEventListener("dblclick", cargaropcion, false);
+		theCanvas.addEventListener("mousemove", mouseMove,false);
+		window.addEventListener("keyup", ButtonkeyListener, false);
+	}
+	
+	//CREAR NODO A PARTIR DE UN DATASET JSON
+	function makeNodos() {
+		var i;
+		var tempX;
+		var tempY;
+		var tempRad = 20; //radio nodo
+		var tempR;
+		var tempG;
+		var tempB;
+		var tempColor;
+		var temptext;
+		var tmpid;
+		var tmpname;
+		var tmpprimero;
+		
+		
+		tempShape = { 	
+								name: "", 
+								x:0, 
+								y:0, 
+								rad:0, 
+								color:"rgb(" + 0 + "," + 0 + "," + 0 +")",
+								primero:0
+							
+						};
+		Nodos["mouse"]= tempShape;
+		
+		for (var i = 0; i < dataset.nodos.length; i++){
+			
+			tempX = dataset.nodos[i].position.x;
+			tempY = dataset.nodos[i].position.y;
+			tmpid =dataset.nodos[i].id ;
+			tmpname = dataset.nodos[i].name;
+			tmpprimero = dataset.nodos[i].primero;
+			if(tmpprimero)
+				tempColor = "rgb(" + 0 + "," + 255 + "," + 0 +")";
+			else
+				tempColor = "rgb(" + 0 + "," + 0 + "," + 255 +")";
+			tempShape = { 	
+								name: tmpname, 
+								x:tempX, 
+								y:tempY, 
+								rad:tempRad, 
+								color:tempColor,
+								primero:tmpprimero
+							
+						};
+			Nodos[tmpid]= tempShape;
+		}		
+	}
+	//MOUSE MOVE LISTENER
+	function mouseMove(evt){
+		var bRect = theCanvas.getBoundingClientRect();
+		mouseX = ((evt.clientX - bRect.left)*(theCanvas.width/bRect.width) - panX)/ scale;
+		mouseY = ((evt.clientY - bRect.top)*(theCanvas.height/bRect.height) - panY)/ scale;
+		Nodos["mouse"].x = mouseX;
+		Nodos["mouse"].y = mouseY;
+		document.getElementById("position").innerHTML = "position: ("+ Math.round( mouseX )+ "," + Math.round( mouseY )+") Nodo:"+dragIndex + " tmparrow:"+ tmparrow +"<br>tipeselect:" + tipeselect;
+		drawScreen();
+	
+	}
+	//MOUSE DOWN LISTENER
+	function mouseDownListener(evt) {
+		var highestIndex = -1;		
+		startDragOffset.x = evt.clientX - translatePos.x;
+        startDragOffset.y = evt.clientY - translatePos.y;
+				
+
+		for (var i in Nodos) {
+			if	(hitTest(Nodos[i], mouseX, mouseY)) {
+				dragging = true;
+				if (i > highestIndex) {
+					dragHoldX = mouseX - Nodos[i].x;
+					dragHoldY = mouseY - Nodos[i].y;
+					highestIndex = i;
+					dragIndex = i;
+					tipeselect = 1;
+				}
+			}
+		}
+		if(highestIndex == -1)
+		for(i=0; i < data_arrows.arrow.length; i++){
+			if(Nodos[data_arrows.arrow[i].to] && Nodos[data_arrows.arrow[i].from]){
+						//primer nodo 
+						var n1x =Nodos[data_arrows.arrow[i].from].x;	//alert(n1x);
+						var n1y =Nodos[data_arrows.arrow[i].from].y;
+						//segundo nodo
+						var n2x =Nodos[data_arrows.arrow[i].to].x;
+						var n2y =Nodos[data_arrows.arrow[i].to].y;	
+						//calcula el min y max de X e Y de ambos nodos
+						if(n1x > n2x){
+							var maxX = n1x;
+							var minX = n2x;
+						}
+						else{
+							var maxX = n2x;
+							var minX = n1x;
+						}
+						if(n1y > n2y){
+							var maxY = n1y;
+							var minY = n2y;
+						}
+						else{
+							var maxY = n2y;
+							var minY = n1y;
+						}
+						//vee si los puntos mouse estan en el rango	max y min{}
+						if(mouseX> minX){	//alert(mouseX+" > "+minX);
+						if(mouseX< maxX){	//alert(mouseX+" < "+maxX);
+						if(mouseY> minY){	//alert(mouseY+" > "+minY);
+						if(mouseY< maxY){	//alert(mouseY+" < "+maxY);
+							//vee si esta en la recta
+							var funclinealX= ((((mouseY-n1y)*(n2x-n1x))/(n2y-n1y))+n1x);	//alert(funclinealX);
+							var funclinealY= ((((mouseX-n1x)*(n2y-n1y))/(n2x-n1x))+n1y);	//alert(funclinealY);
+							if(mouseX>funclinealX-30){	//se suma o resta el ancho de la flecha
+							if(mouseX<funclinealX+30){
+								if(mouseY>funclinealY-30){
+								if(mouseY<funclinealY+30){
+									if (i > highestIndex) {
+									highestIndex =i;
+									tmparrow = i;
+									tipeselect=2;
+									}
+								}}
+							}}
+						}}}}
+			}
+		}
+		
+		
+		
+		if (dragging) {
+			theCanvas.addEventListener("mousemove", mouseMoveListener, false);
+		}else {
+				dragging=true;
+				screen = true;
+				theCanvas.addEventListener("mousemove", mouseMoveListener,false);
+
+		}
+		
+		
+		theCanvas.removeEventListener("mousedown", mouseDownListener, false);
+		theCanvas.addEventListener("mouseup", mouseUpListener, false);
+		
+		if (evt.preventDefault) {
+			evt.preventDefault();
+		} //standard
+		else if (evt.returnValue) {
+			evt.returnValue = false;
+		} //older IE
+		
+		drawSelectedNode();
+		
+		return false;
+	}
+	
+	//MOUSE UP LISTENER
+	function mouseUpListener(evt) {
+		theCanvas.addEventListener("mousedown", mouseDownListener, false);
+		theCanvas.removeEventListener("mouseup", mouseUpListener, false);
+		if (dragging) {
+			dragging = false;
+			screen = false;
+			theCanvas.removeEventListener("mousemove", mouseMoveListener, false);
+		}
+	}
+	//MOUSE MOVE LISTENER
+	function mouseMoveListener(evt) {
+	
+	
+		if (dragging && screen) 
+		{
+                        translatePos.x = evt.clientX - startDragOffset.x;
+                        translatePos.y = evt.clientY - startDragOffset.y;
+						
+						panX = translatePos.x;
+				        panY = translatePos.y;
+                        drawScreen();
+        }else{
+	
+	
+		var posX;
+		var posY;
+		var shapeRad = Nodos[dragIndex].rad;
+		var minX = shapeRad;
+		var maxX = theCanvas.width - shapeRad;
+		var minY = shapeRad;
+		var maxY = theCanvas.height - shapeRad;
+		
+		posX = mouseX - dragHoldX;
+		posY = mouseY - dragHoldY;
+		
+		Nodos[dragIndex].x = posX;
+		Nodos[dragIndex].y = posY;
+		
+		drawScreen();
+		}
+	}
+	
+	//BOTON LISTENER  ******* DESACTIVAR EN CASOS ESPECIALES
+	function ButtonkeyListener(evt){
+		 var keyCode = evt.which;
+		 //console.log(evt, keyCode, evt.which)
+		 if(keyCode == 46 || keyCode == 8){
+			if(tipeselect == 1)
+				$(".eliminar-titulo").html("Eliminar Nodo:"+ dragIndex);
+			else if(tipeselect == 2)
+				$(".eliminar-titulo").html("Eliminar Flecha:"+ tmparrow);
+			
+			$( "#dialog-confirm" ).dialog("open");
+		 }
+			
+		
+	}
+	
+	//VERIFICAR SI MOUSE TOCA A UN NODO
+	function hitTest(shape,mx,my) {
+		
+		var dx;
+		var dy;
+		dx = mx - shape.x;
+		dy = my - shape.y;
+		
+		//a "hit" will be registered if the distance away from the center is less than the radius of the circular object		
+		return (dx*dx + dy*dy < shape.rad*shape.rad);
+	}
+	
+	//DIBUJAR
+	//DIBUJAR NODOS
+	function drawNodos() {
+		var i;
+		//for (i=0; i < Nodos.length; i++) {
+		for (var key in Nodos) {
+			context.fillStyle = Nodos[key].color;
+			context.font="15px Verdana";
+			context.textAlign="center"; 
+			context.beginPath();
+			context.arc(Nodos[key].x, Nodos[key].y, Nodos[key].rad, 0, 2*Math.PI, false);
+			context.fillText(Nodos[key].name,Nodos[key].x,Nodos[key].y+30);
+			context.closePath();
+			context.fill();
+		}
+	}
+	//DIBUJAR FLECHAS
+	function drawArrows(){
+		var headlen = 10;	// length of head in pixels
+		context.fillStyle = "rgb(" + 110 + "," + 110 + "," + 110 +")";
+		context.font="15px Verdana";
+		context.textAlign="center"; 
+		
+		context.lineWidth = 3;
+	
+		for(i=0; i < data_arrows.arrow.length; i++){
+		context.beginPath();	
+			if(Nodos[data_arrows.arrow[i].to] && Nodos[data_arrows.arrow[i].from]){
+			if(Nodos[data_arrows.arrow[i].to] != Nodos[data_arrows.arrow[i].from]){
+
+				var fromx = Nodos[data_arrows.arrow[i].from].x;
+				var fromy = Nodos[data_arrows.arrow[i].from].y;
+				var tox = Nodos[data_arrows.arrow[i].to].x;
+				var toy = Nodos[data_arrows.arrow[i].to].y;
+				
+				var dx = tox-fromx;		//DIRECCION X
+				var dy = toy-fromy;		//DIRECCION Y
+				var angle = Math.atan2(dy,dx); //ANGULO P1 A P2
+				
+				
+				//FROMMMMM
+				var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+				//var scale = Math.sqrt((dx*dx) + (dy*dy));
+				var fromx_norm= dx/scale0;
+				var fromy_norm= dy/scale0;
+				
+				var scale1 = Math.sqrt(((fromx-tox)*(fromx-tox)) + ((fromy-toy)*(fromy-toy)));
+				var tox_norm= (fromx-tox)/scale1;
+				var toy_norm= (fromy-toy)/scale1;
+				
+				if(data_arrows.arrow[i].to != "mouse"){
+				fromx = fromx+(fromx_norm*20);
+				fromy =fromy+(fromy_norm*20);
+				tox = tox+(tox_norm*20);
+				toy = toy+(toy_norm*20);
+				}else{
+					fromx = fromx+(fromx_norm);
+					fromy =fromy+(fromy_norm);
+					tox = tox+(tox_norm);
+					toy = toy+(toy_norm);
+				}
+				//TOOOOOOO
+				
+				if(tmparrow == i)
+					context.strokeStyle = "rgb(" + 255 + "," + 205 + "," + 0 +")";
+				else
+					context.strokeStyle = "rgb(" + 110 + "," + 110 + "," + 110 +")";
+					
+				context.moveTo(fromx, fromy);
+				context.lineTo(tox, toy);
+				context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+				context.moveTo(tox, toy);
+				context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+				context.fillText(data_arrows.arrow[i].namea,(fromx+tox)/2,(fromy+toy)/2+30);
+				
+				
+			
+			}else{
+				var fromx = Nodos[data_arrows.arrow[i].from].x;
+				var fromy = Nodos[data_arrows.arrow[i].from].y;
+				var tox = Nodos[data_arrows.arrow[i].to].x;
+				var toy = Nodos[data_arrows.arrow[i].to].y;
+				
+				var dx = -1;		//DIRECCION X
+				var dy = +1;		//DIRECCION Y
+				
+				var dx1 = +1;		//DIRECCION X
+				var dy1 = +1;		//DIRECCION Y
+				var angle = Math.atan2(dy1,dx1); //ANGULO P1 A P2
+				
+				//var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+				var scale0 = Math.sqrt((dx*dx) + (dy*dy));
+				var fromx_norm= dx/scale0;
+				var fromy_norm= dy/scale0;
+				fromx = fromx+(fromx_norm*20);
+				fromy =fromy+(fromy_norm*20);
+				//var scale1 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+				var scale1 = Math.sqrt((dx1*dx1) + (dy1*dy1));
+				var fromx_norm1= dx1/scale1;
+				var fromy_norm1= dy1/scale1;
+				tox = tox+(fromx_norm1*20);
+				toy =toy+(fromy_norm1*20);
+				
+				context.moveTo(fromx, fromy);
+				context.bezierCurveTo(fromx-80, fromy+60, tox+80, toy+60, tox, toy);
+				context.lineTo(tox+headlen*Math.cos(angle-Math.PI/6),toy+headlen*Math.sin(angle-Math.PI/6));
+				context.moveTo(tox, toy);
+				context.lineTo(tox+headlen*Math.cos(angle+Math.PI/6),toy+headlen*Math.sin(angle+Math.PI/6));
+				context.fillText(data_arrows.arrow[i].namea,(fromx+tox)/2,(fromy+toy)/2+30);
+				
+			
+			}
+			}
+		context.stroke();
+		context.closePath();
+		}
+		
+		
+			
+	}
+	
+	//MOVER SCREEN
+	function drawScreen() {
+		//bg
+		context.clearRect(0, 0, 500, 300);
+		context.save();
+		
+		context.fillStyle = "#FFFFFF";
+		context.fillRect(0,0,theCanvas.width,theCanvas.height);
+		context.translate(panX, panY);
+		//context.translate(translatePos.x, translatePos.y);  //SET TRANSLATE
+		context.scale(scale, scale);  //SET SCALE
+		drawArrows();
+		drawNodos();
+		
+		
+		context.restore();
+		
+	}
+	
+	//PINTAR EL NODO SELECCIONADO
+	function drawSelectedNode(){
+		for (var key in Nodos) {
+			if(key == dragIndex)
+				Nodos[key].color = "rgb(" + 255 + "," + 0 + "," + 0 +")";
+			else {
+				if(Nodos[key].primero)
+					Nodos[key].color = "rgb(" + 0 + "," + 255 + "," + 0 +")";
+				else
+					Nodos[key].color = "rgb(" + 0 + "," + 0 + "," + 255 +")";
+			}
+		}
+		drawScreen();
+	} 
+	
+	//CARGAR OPCIONES
+	function cargaropcion(){
+
+		
+		var highestIndex = -1;
+		for (var i in Nodos) {
+			if	(hitTest(Nodos[i], mouseX, mouseY)) {
+				dragging = true;
+				if (i > highestIndex) {
+					//We will pay attention to the point on the object where the mouse is "holding" the object:
+					dragHoldX = mouseX - Nodos[i].x;
+					dragHoldY = mouseY - Nodos[i].y;
+					highestIndex = i;
+					dragIndex = i;
+				}
+			}
+		}
+		
+		if(highestIndex != -1){
+			//alert("CARGAR OPCIONES DEL NODO "+ dragIndex);
+			drawSelectedNode();
+			alert("cargar opciones Nodo"+highestIndex);
+		}else
+		{
+					//AQUIIIII COMPROBAR FLECHAS
+					for(i=0; i < data_arrows.arrow.length; i++){
+					if(Nodos[data_arrows.arrow[i].to] && Nodos[data_arrows.arrow[i].from]){
+						//primer nodo 
+						var n1x =Nodos[data_arrows.arrow[i].from].x;	//alert(n1x);
+						var n1y =Nodos[data_arrows.arrow[i].from].y;
+						//segundo nodo
+						var n2x =Nodos[data_arrows.arrow[i].to].x;
+						var n2y =Nodos[data_arrows.arrow[i].to].y;	
+						//calcula el min y max de X e Y de ambos nodos
+						if(n1x > n2x){
+							var maxX = n1x;
+							var minX = n2x;
+						}
+						else{
+							var maxX = n2x;
+							var minX = n1x;
+						}
+						if(n1y > n2y){
+							var maxY = n1y;
+							var minY = n2y;
+						}
+						else{
+							var maxY = n2y;
+							var minY = n1y;
+						}
+						//vee si los puntos mouse estan en el rango	max y min{}
+						if(mouseX> minX){	//alert(mouseX+" > "+minX);
+						if(mouseX< maxX){	//alert(mouseX+" < "+maxX);
+						if(mouseY> minY){	//alert(mouseY+" > "+minY);
+						if(mouseY< maxY){	//alert(mouseY+" < "+maxY);
+							//vee si esta en la recta
+							var funclinealX= ((((mouseY-n1y)*(n2x-n1x))/(n2y-n1y))+n1x);	//alert(funclinealX);
+							var funclinealY= ((((mouseX-n1x)*(n2y-n1y))/(n2x-n1x))+n1y);	//alert(funclinealY);
+							if(mouseX>funclinealX-30){	//se suma o resta el ancho de la flecha
+							if(mouseX<funclinealX+30){
+								if(mouseY>funclinealY-30){
+								if(mouseY<funclinealY+30){
+									if (i > highestIndex) {
+									highestIndex =i;
+									tmparrow = i;
+									tipeselect=2;
+									}
+								}}
+							}}
+						}}}}
+					}
+					}
+			if(highestIndex == -1)
+				new_node();
+			else{
+				//$( "#dialog-confirm" ).dialog("open");
+				//alert("flecha perteneciente al nodo:"+ highestIndex);
+			}
+				
+	
+		}	
+		
+	}
+	
+	// ADD BUTTONS LISTENERS
+	document.addEventListener('contextmenu', function(e) {
+	
+		e.preventDefault();
+	}, false);
+	
+	document.getElementById("plusnode").addEventListener("click", function(){
+		new_node();
+	}, false);
+	
+	document.getElementById("plus").addEventListener("click", function(){
+		scale /= scaleMultiplier;
+		drawScreen();
+	}, false);
+
+	document.getElementById("back").addEventListener("click", function(){
+		Nodos = [];
+		makeNodos();
+		drawScreen();
+	}, false);
+	
+	document.getElementById("minus").addEventListener("click", function(){
+		scale *= scaleMultiplier;
+		drawScreen();
+	}, false);
+	
+	document.getElementById("arrow").addEventListener("click", function(){
+		if(dragIndex){
+			if(!isarrow){
+				tmparrow = data_arrows.arrow.push({
+				  "from": dragIndex,"to": "mouse","namea":""
+				}) -1;
+				//alert(Nodo["mouse"].x);
+				isarrow = true;
+			}
+		theCanvas.addEventListener("mouseup", arrowNodo, false);		
+		}else{
+			alert("Nodo no seleccionado");
+		}
+			
+	}, false);
+	
+	
+	
+	//CREAR ARROW 
+	function arrowNodo(evt){
+	
+		
+		if (evt.which === 3){ // right click = 3, left click = 1
+			theCanvas.removeEventListener("mouseup", arrowNodo, false);	
+			if(data_arrows.arrow[tmparrow].to == "mouse"){	
+				data_arrows.arrow.splice(tmparrow,1);
+			}
+			isarrow = false;
+
+		}else{
+			dialog.dialog( "open" );      
+		}
+	}
+
+	//CREAR NODO
+	function new_node(){
+	
+		alert("nuevo Nodo: "+new_id);
+
+		/*
+		Nodos = [];
+		dataset.nodos.push({
+			  "id": new_id,"name": "nodo"+new_id,"position": {"x": mouseX, "y": mouseY},"primero": 0
+		});
+		//makeNodos();
+		*/
+		
+		
+		
+		tempX = mouseX;
+		tempY = mouseY;
+		tmpid =new_id ;
+		tmpname = "Nodo"+new_id;
+		tmpprimero =0;
+		if(tmpprimero)
+			tempColor = "rgb(" + 0 + "," + 255 + "," + 0 +")";
+		else
+			tempColor = "rgb(" + 0 + "," + 0 + "," + 255 +")";
+		tempShape = { 	
+			name: tmpname, 
+			x:tempX, 
+			y:tempY, 
+			rad:20, 
+			color:tempColor,
+			primero:tmpprimero
+			};
+		Nodos[tmpid]= tempShape;
+		dragIndex = tmpid;
+		new_id++;
+		
+		drawScreen();
+		drawSelectedNode();
+		
+		
+	}
+	
+	//DIALOGS
+	var dialog, form,
+    name = $( "#name" );
+
+    dialog = $( "#dialog-form" ).dialog({
+      autoOpen: false,
+      height: 400,
+      width: 350,
+      modal: true,
+      buttons: {
+		"Aceptar":function() {
+		
+			var highestIndex = -1;
+			for (var i in Nodos) {
+				if	(hitTest(Nodos[i], mouseX, mouseY)) {
+					dragging = true;
+					if (i > highestIndex) {
+						//We will pay attention to the point on the object where the mouse is "holding" the object:
+						dragHoldX = mouseX - Nodos[i].x;
+						dragHoldY = mouseY - Nodos[i].y;
+						highestIndex = i;
+						dragIndex = i;
+					}
+				}
+			}
+
+			if(highestIndex == -1)
+				new_node();
+				
+			data_arrows.arrow[tmparrow].to = dragIndex;
+			data_arrows.arrow[tmparrow].namea =name.val();
+			alert("agregar nodo/enlace HIJO FROM=" +data_arrows.arrow[tmparrow].from +" to: "+data_arrows.arrow[tmparrow].from);
+			//theCanvas.removeEventListener("click", arrowNodo, false);
+			
+			
+			dialog.dialog( "close" );
+        },		
+        Cancel: function() {
+          dialog.dialog( "close" );
+        }
+      },
+      close: function() {
+		theCanvas.removeEventListener("mouseup", arrowNodo, false);	
+        form[ 0 ].reset();
+		if(data_arrows.arrow[tmparrow].to == "mouse"){	
+			data_arrows.arrow.splice(tmparrow,1);
+		}
+		isarrow = false;
+		drawScreen();
+      }
+    });
+	
+	$( "#dialog-confirm" ).dialog({
+				  resizable: false,
+				  height: "auto",
+				  width: 400,
+				  modal: true,
+				  autoOpen: false,
+				  buttons: {
+					"Borrar": function() {
+					
+					  if(tipeselect == 1){
+							delete Nodos[dragIndex];
+					  }else if(tipeselect == 2){
+						data_arrows.arrow.splice(tmparrow,1);
+					  }
+					  
+					  drawScreen();
+					  $( this ).dialog( "close" );
+					  
+					},
+					Cancel: function() {
+					  $( this ).dialog( "close" );
+					}
+				  }
+	});
+ 
+    form = dialog.find( "form" ).on( "submit", function( event ) {
+      event.preventDefault();
+      //addUser();
+    });
+
+}
+} );
+
+</script>
+
+</head>
+<body>
+<div style="top: 50px; text-align:center">
+<canvas id="canvasOne" width="500" height="300" style="border:1px solid #000000;">
+Your browser does not support HTML5 canvas.
+
+</canvas>
+<p id="position"> position:</p>
+<button id="plusnode"  style= 'position:absolute; top:280px;left:700px; zindex:2'>+ nodo</button>
+<input type="button" id="arrow" value="->" style= 'position:absolute; top:80px;left:710px;width: 26px; zindex:2'>
+<input type="button" id="back" value="init" style= 'position:absolute; top:20px;left:270px;width: 35px; zindex:2'>
+<input type="button" id="plus" value="+" style= 'position:absolute; top:20px;left:710px;width: 26px; zindex:2'>
+<input type="button" id="minus" value="-" style= 'position:absolute; top:50px;left:710px;width: 26px; zindex:2'>
+
+
+<div id="dialog-form" title="Crear nuevo enlace">
+  <p class="validateTips">AGREGAR NOMBRE FLECHA</p>
+  <form>
+    <fieldset>
+      <label for="name">Name</label>
+      <input type="text" name="name" id="name" value="" class="text ui-widget-content ui-corner-all">
+      <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+    </fieldset>
+  </form>
+</div>
+
+
+<div id="dialog-confirm" title="Empty the recycle bin?">
+  <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span><p class = "eliminar-titulo">ELIMINAR FLECHA???</p></p>
+</div>
+
+</div>
+</body>
+</html>
