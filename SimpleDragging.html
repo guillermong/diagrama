@@ -45,7 +45,7 @@ var dataset={
 var data_arrows = {
   "arrow": [
     {
-      "from": 1,"to": 2,"namea":"tiene internet?"
+      "from": 1,"to": 2,"namea":"tiene internet?","pos": 1
     },
 	 {
       "from": 2,"to": 1,"namea":"apagar router"
@@ -98,6 +98,8 @@ function canvasApp() {
 	var isarrow = false;
 	var tmparrow;
 	var tipeselect; // 1 :nodo 2:flecha
+	
+	var arrowrep;
 
 	
 	init();
@@ -172,7 +174,10 @@ function canvasApp() {
 		mouseY = ((evt.clientY - bRect.top)*(theCanvas.height/bRect.height) - panY)/ scale;
 		Nodos["mouse"].x = mouseX;
 		Nodos["mouse"].y = mouseY;
-		document.getElementById("position").innerHTML = "position: ("+ Math.round( mouseX )+ "," + Math.round( mouseY )+") Nodo:"+dragIndex + " tmparrow:"+ tmparrow +"<br>tipeselect:" + tipeselect;
+		document.getElementById("position").innerHTML = "position: ("+ Math.round( mouseX )+ "," 
+								+ Math.round( mouseY )+") Nodo:"+dragIndex + " tmparrow:"+ 
+								tmparrow +"<br>tipeselect:" + tipeselect
+								+"<br>dragging:" + dragging +"<br>screen:" + screen;
 		drawScreen();
 	
 	}
@@ -182,7 +187,7 @@ function canvasApp() {
 		startDragOffset.x = evt.clientX - translatePos.x;
         startDragOffset.y = evt.clientY - translatePos.y;
 				
-
+		//VERIFICAR SI CLICK EN NODO
 		for (var i in Nodos) {
 			if	(hitTest(Nodos[i], mouseX, mouseY)) {
 				dragging = true;
@@ -195,64 +200,89 @@ function canvasApp() {
 				}
 			}
 		}
-		if(highestIndex == -1)
-		for(i=0; i < data_arrows.arrow.length; i++){
-			if(Nodos[data_arrows.arrow[i].to] && Nodos[data_arrows.arrow[i].from]){
-						//primer nodo 
-						var n1x =Nodos[data_arrows.arrow[i].from].x;	//alert(n1x);
-						var n1y =Nodos[data_arrows.arrow[i].from].y;
-						//segundo nodo
-						var n2x =Nodos[data_arrows.arrow[i].to].x;
-						var n2y =Nodos[data_arrows.arrow[i].to].y;	
-						//calcula el min y max de X e Y de ambos nodos
-						if(n1x > n2x){
-							var maxX = n1x;
-							var minX = n2x;
+
+		
+		if(highestIndex == -1){
+			for(i=0; i < data_arrows.arrow.length; i++){
+					var fromx = Nodos[data_arrows.arrow[i].from].x;
+					var fromy = Nodos[data_arrows.arrow[i].from].y;
+					var tox = Nodos[data_arrows.arrow[i].to].x;
+					var toy = Nodos[data_arrows.arrow[i].to].y;
+					
+					if(Nodos[data_arrows.arrow[i].from].x == Nodos[data_arrows.arrow[i].to].x && Nodos[data_arrows.arrow[i].from].y == Nodos[data_arrows.arrow[i].to].y){
+					
+						var dx = -1;		//DIRECCION X
+						var dy = +1;		//DIRECCION Y
+						
+						var dx1 = +1;		//DIRECCION X
+						var dy1 = +1;		//DIRECCION Y
+						var angle = Math.atan2(dy1,dx1); //ANGULO P1 A P2
+						
+						
+						//var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+						var scale0 = Math.sqrt((dx*dx) + (dy*dy));
+						var fromx_norm= dx/scale0;
+						var fromy_norm= dy/scale0;
+						fromx = fromx+(fromx_norm*20);
+						fromy =fromy+(fromy_norm*20);
+						//var scale1 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+						var scale1 = Math.sqrt((dx1*dx1) + (dy1*dy1));
+						var fromx_norm1= dx1/scale1;
+						var fromy_norm1= dy1/scale1;
+						tox = tox+(fromx_norm1*20);
+						toy =toy+(fromy_norm1*20);
+					
+					distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx-80,  fromy+60, tox+80,  toy+60,  tox,  toy);			
+					}else{
+					
+						var dx = tox-fromx;		//DIRECCION X
+						var dy = toy-fromy;		//DIRECCION Y
+						var angle = Math.atan2(dy,dx); //ANGULO P1 A P2
+						
+						
+						//FROMMMMM
+						var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+						//var scale = Math.sqrt((dx*dx) + (dy*dy));
+						var fromx_norm= dx/scale0;
+						var fromy_norm= dy/scale0;
+						
+						var scale1 = Math.sqrt(((fromx-tox)*(fromx-tox)) + ((fromy-toy)*(fromy-toy)));
+						var tox_norm= (fromx-tox)/scale1;
+						var toy_norm= (fromy-toy)/scale1;
+						
+						if(data_arrows.arrow[i].to != "mouse"){
+						fromx = fromx+(fromx_norm*20);
+						fromy =fromy+(fromy_norm*20);
+						tox = tox+(tox_norm*20);
+						toy = toy+(toy_norm*20);
+						}else{
+							fromx = fromx+(fromx_norm);
+							fromy =fromy+(fromy_norm);
+							tox = tox+(tox_norm);
+							toy = toy+(toy_norm);
 						}
-						else{
-							var maxX = n2x;
-							var minX = n1x;
-						}
-						if(n1y > n2y){
-							var maxY = n1y;
-							var minY = n2y;
-						}
-						else{
-							var maxY = n2y;
-							var minY = n1y;
-						}
-						//vee si los puntos mouse estan en el rango	max y min{}
-						if(mouseX> minX){	//alert(mouseX+" > "+minX);
-						if(mouseX< maxX){	//alert(mouseX+" < "+maxX);
-						if(mouseY> minY){	//alert(mouseY+" > "+minY);
-						if(mouseY< maxY){	//alert(mouseY+" < "+maxY);
-							//vee si esta en la recta
-							var funclinealX= ((((mouseY-n1y)*(n2x-n1x))/(n2y-n1y))+n1x);	//alert(funclinealX);
-							var funclinealY= ((((mouseX-n1x)*(n2y-n1y))/(n2x-n1x))+n1y);	//alert(funclinealY);
-							if(mouseX>funclinealX-30){	//se suma o resta el ancho de la flecha
-							if(mouseX<funclinealX+30){
-								if(mouseY>funclinealY-30){
-								if(mouseY<funclinealY+30){
-									if (i > highestIndex) {
-									highestIndex =i;
-									tmparrow = i;
-									tipeselect=2;
-									}
-								}}
-							}}
-						}}}}
+						distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx,  fromy, tox,  toy,  tox,  toy);
+					}
+					if(distance < 5 && i > highestIndex ){
+						highestIndex =i;
+						tmparrow = i;
+						tipeselect=2;
+					}
 			}
 		}
+		
+		
 		
 		
 		
 		if (dragging) {
 			theCanvas.addEventListener("mousemove", mouseMoveListener, false);
 		}else {
+			if(highestIndex == -1){
 				dragging=true;
 				screen = true;
 				theCanvas.addEventListener("mousemove", mouseMoveListener,false);
-
+			}
 		}
 		
 		
@@ -271,6 +301,26 @@ function canvasApp() {
 		return false;
 	}
 	
+	//http://stackoverflow.com/questions/2742610/closest-point-on-a-cubic-bezier-curve
+	function getClosestPointToCubicBezier( fx,  fy,  slices,  x0,  y0,  x1,  y1, x2,  y2,  x3, 	 y3)  {
+		var tick = 1 /  slices;
+		var x;
+		var y;
+		var t;
+		var bestDistance = 9999999999;
+		var currentDistance;
+		for (var i = 0; i <= slices; i++) {
+			t = i * tick;
+			x = (1 - t) * (1 - t) * (1 - t) * x0 + 3 * (1 - t) * (1 - t) * t * x1 + 3 * (1 - t) * t * t * x2 + t * t * t * x3;
+			y = (1 - t) * (1 - t) * (1 - t) * y0 + 3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 + t * t * t * y3;
+			currentDistance =Math.sqrt( (x-fx)*(x-fx) + (y-fy)*(y-fy) ); 
+			if (currentDistance < bestDistance) {
+				bestDistance = currentDistance;
+			}
+		}
+		return bestDistance;
+	}
+	
 	//MOUSE UP LISTENER
 	function mouseUpListener(evt) {
 		theCanvas.addEventListener("mousedown", mouseDownListener, false);
@@ -283,7 +333,7 @@ function canvasApp() {
 	}
 	//MOUSE MOVE LISTENER
 	function mouseMoveListener(evt) {
-	
+		
 	
 		if (dragging && screen) 
 		{
@@ -405,13 +455,19 @@ function canvasApp() {
 				}
 				//TOOOOOOO
 				
-				if(tmparrow == i)
+				if(tmparrow == i && tipeselect == 2)
 					context.strokeStyle = "rgb(" + 255 + "," + 205 + "," + 0 +")";
 				else
-					context.strokeStyle = "rgb(" + 110 + "," + 110 + "," + 110 +")";
+					if(data_arrows.arrow[i].from == dragIndex)
+						context.strokeStyle = "rgb(" + 200 + "," + 0 + "," + 0 +")";
+					else if (data_arrows.arrow[i].to == dragIndex)
+						context.strokeStyle = "rgb(" + 100 + "," + 0 + "," + 0 +")";
+					else
+						context.strokeStyle = "rgb(" + 110 + "," + 110 + "," + 110 +")";
 					
 				context.moveTo(fromx, fromy);
-				context.lineTo(tox, toy);
+				//context.lineTo(tox, toy);
+				context.bezierCurveTo(fromx, fromy, tox, toy, tox, toy);
 				context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
 				context.moveTo(tox, toy);
 				context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
@@ -431,6 +487,16 @@ function canvasApp() {
 				var dx1 = +1;		//DIRECCION X
 				var dy1 = +1;		//DIRECCION Y
 				var angle = Math.atan2(dy1,dx1); //ANGULO P1 A P2
+				
+				if(tmparrow == i && tipeselect == 2)
+					context.strokeStyle = "rgb(" + 255 + "," + 205 + "," + 0 +")";
+				else
+					if(data_arrows.arrow[i].from == dragIndex)
+						context.strokeStyle = "rgb(" + 200 + "," + 0 + "," + 0 +")";
+					else if (data_arrows.arrow[i].to == dragIndex)
+						context.strokeStyle = "rgb(" + 100 + "," + 0 + "," + 0 +")";
+					else
+						context.strokeStyle = "rgb(" + 110 + "," + 110 + "," + 110 +")";
 				
 				//var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
 				var scale0 = Math.sqrt((dx*dx) + (dy*dy));
@@ -485,7 +551,7 @@ function canvasApp() {
 	//PINTAR EL NODO SELECCIONADO
 	function drawSelectedNode(){
 		for (var key in Nodos) {
-			if(key == dragIndex)
+			if(key == dragIndex )
 				Nodos[key].color = "rgb(" + 255 + "," + 0 + "," + 0 +")";
 			else {
 				if(Nodos[key].primero)
@@ -504,7 +570,6 @@ function canvasApp() {
 		var highestIndex = -1;
 		for (var i in Nodos) {
 			if	(hitTest(Nodos[i], mouseX, mouseY)) {
-				dragging = true;
 				if (i > highestIndex) {
 					//We will pay attention to the point on the object where the mouse is "holding" the object:
 					dragHoldX = mouseX - Nodos[i].x;
@@ -523,64 +588,89 @@ function canvasApp() {
 		{
 					//AQUIIIII COMPROBAR FLECHAS
 					for(i=0; i < data_arrows.arrow.length; i++){
-					if(Nodos[data_arrows.arrow[i].to] && Nodos[data_arrows.arrow[i].from]){
-						//primer nodo 
-						var n1x =Nodos[data_arrows.arrow[i].from].x;	//alert(n1x);
-						var n1y =Nodos[data_arrows.arrow[i].from].y;
-						//segundo nodo
-						var n2x =Nodos[data_arrows.arrow[i].to].x;
-						var n2y =Nodos[data_arrows.arrow[i].to].y;	
-						//calcula el min y max de X e Y de ambos nodos
-						if(n1x > n2x){
-							var maxX = n1x;
-							var minX = n2x;
+					var fromx = Nodos[data_arrows.arrow[i].from].x;
+					var fromy = Nodos[data_arrows.arrow[i].from].y;
+					var tox = Nodos[data_arrows.arrow[i].to].x;
+					var toy = Nodos[data_arrows.arrow[i].to].y;
+					
+					if(Nodos[data_arrows.arrow[i].from].x == Nodos[data_arrows.arrow[i].to].x && Nodos[data_arrows.arrow[i].from].y == Nodos[data_arrows.arrow[i].to].y){
+					
+						var dx = -1;		//DIRECCION X
+						var dy = +1;		//DIRECCION Y
+						
+						var dx1 = +1;		//DIRECCION X
+						var dy1 = +1;		//DIRECCION Y
+						var angle = Math.atan2(dy1,dx1); //ANGULO P1 A P2
+						
+						
+						//var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+						var scale0 = Math.sqrt((dx*dx) + (dy*dy));
+						var fromx_norm= dx/scale0;
+						var fromy_norm= dy/scale0;
+						fromx = fromx+(fromx_norm*20);
+						fromy =fromy+(fromy_norm*20);
+						//var scale1 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+						var scale1 = Math.sqrt((dx1*dx1) + (dy1*dy1));
+						var fromx_norm1= dx1/scale1;
+						var fromy_norm1= dy1/scale1;
+						tox = tox+(fromx_norm1*20);
+						toy =toy+(fromy_norm1*20);
+					
+						distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx-80,  fromy+60, tox+80,  toy+60,  tox,  toy);			
+					}else{
+					
+						var dx = tox-fromx;		//DIRECCION X
+						var dy = toy-fromy;		//DIRECCION Y
+						var angle = Math.atan2(dy,dx); //ANGULO P1 A P2
+						
+						
+						//FROMMMMM
+						var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+						//var scale = Math.sqrt((dx*dx) + (dy*dy));
+						var fromx_norm= dx/scale0;
+						var fromy_norm= dy/scale0;
+						
+						var scale1 = Math.sqrt(((fromx-tox)*(fromx-tox)) + ((fromy-toy)*(fromy-toy)));
+						var tox_norm= (fromx-tox)/scale1;
+						var toy_norm= (fromy-toy)/scale1;
+						
+						if(data_arrows.arrow[i].to != "mouse"){
+						fromx = fromx+(fromx_norm*20);
+						fromy =fromy+(fromy_norm*20);
+						tox = tox+(tox_norm*20);
+						toy = toy+(toy_norm*20);
+						}else{
+							fromx = fromx+(fromx_norm);
+							fromy =fromy+(fromy_norm);
+							tox = tox+(tox_norm);
+							toy = toy+(toy_norm);
 						}
-						else{
-							var maxX = n2x;
-							var minX = n1x;
-						}
-						if(n1y > n2y){
-							var maxY = n1y;
-							var minY = n2y;
-						}
-						else{
-							var maxY = n2y;
-							var minY = n1y;
-						}
-						//vee si los puntos mouse estan en el rango	max y min{}
-						if(mouseX> minX){	//alert(mouseX+" > "+minX);
-						if(mouseX< maxX){	//alert(mouseX+" < "+maxX);
-						if(mouseY> minY){	//alert(mouseY+" > "+minY);
-						if(mouseY< maxY){	//alert(mouseY+" < "+maxY);
-							//vee si esta en la recta
-							var funclinealX= ((((mouseY-n1y)*(n2x-n1x))/(n2y-n1y))+n1x);	//alert(funclinealX);
-							var funclinealY= ((((mouseX-n1x)*(n2y-n1y))/(n2x-n1x))+n1y);	//alert(funclinealY);
-							if(mouseX>funclinealX-30){	//se suma o resta el ancho de la flecha
-							if(mouseX<funclinealX+30){
-								if(mouseY>funclinealY-30){
-								if(mouseY<funclinealY+30){
-									if (i > highestIndex) {
-									highestIndex =i;
-									tmparrow = i;
-									tipeselect=2;
-									}
-								}}
-							}}
-						}}}}
+						distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx,  fromy, tox,  toy,  tox,  toy);
 					}
+					if(distance < 5 && i > highestIndex ){
+						highestIndex =i;
+						tmparrow = i;
+						tipeselect=2;
 					}
+			}
 			if(highestIndex == -1)
 				new_node();
 			else{
-				//$( "#dialog-confirm" ).dialog("open");
-				//alert("flecha perteneciente al nodo:"+ highestIndex);
+				$( "#dialog-confirm" ).dialog("open");
 			}
-				
 	
 		}	
 		
 	}
-	
+	document.getElementById("canvasOne").addEventListener('wheel', function (e) {
+    if (e.wheelDelta / 120 > 0) {
+			scale /= scaleMultiplier;
+			drawScreen();
+		} else {
+			scale *= scaleMultiplier;
+			drawScreen();
+		}
+	});
 	// ADD BUTTONS LISTENERS
 	document.addEventListener('contextmenu', function(e) {
 	
@@ -595,15 +685,15 @@ function canvasApp() {
 		scale /= scaleMultiplier;
 		drawScreen();
 	}, false);
-
-	document.getElementById("back").addEventListener("click", function(){
-		Nodos = [];
-		makeNodos();
-		drawScreen();
-	}, false);
 	
 	document.getElementById("minus").addEventListener("click", function(){
 		scale *= scaleMultiplier;
+		drawScreen();
+	}, false);
+	
+	document.getElementById("back").addEventListener("click", function(){
+		Nodos = [];
+		makeNodos();
 		drawScreen();
 	}, false);
 	
@@ -698,9 +788,7 @@ function canvasApp() {
 			var highestIndex = -1;
 			for (var i in Nodos) {
 				if	(hitTest(Nodos[i], mouseX, mouseY)) {
-					dragging = true;
 					if (i > highestIndex) {
-						//We will pay attention to the point on the object where the mouse is "holding" the object:
 						dragHoldX = mouseX - Nodos[i].x;
 						dragHoldY = mouseY - Nodos[i].y;
 						highestIndex = i;
@@ -715,7 +803,6 @@ function canvasApp() {
 			data_arrows.arrow[tmparrow].to = dragIndex;
 			data_arrows.arrow[tmparrow].namea =name.val();
 			alert("agregar nodo/enlace HIJO FROM=" +data_arrows.arrow[tmparrow].from +" to: "+data_arrows.arrow[tmparrow].from);
-			//theCanvas.removeEventListener("click", arrowNodo, false);
 			
 			
 			dialog.dialog( "close" );
@@ -748,6 +835,7 @@ function canvasApp() {
 							delete Nodos[dragIndex];
 					  }else if(tipeselect == 2){
 						data_arrows.arrow.splice(tmparrow,1);
+						tmparrow = undefined;
 					  }
 					  
 					  drawScreen();
@@ -773,16 +861,16 @@ function canvasApp() {
 </head>
 <body>
 <div style="top: 50px; text-align:center">
-<canvas id="canvasOne" width="500" height="300" style="border:1px solid #000000;">
+<canvas id="canvasOne" width="800" height="500" style="border:1px solid #000000;">
 Your browser does not support HTML5 canvas.
 
 </canvas>
 <p id="position"> position:</p>
-<button id="plusnode"  style= 'position:absolute; top:280px;left:700px; zindex:2'>+ nodo</button>
-<input type="button" id="arrow" value="->" style= 'position:absolute; top:80px;left:710px;width: 26px; zindex:2'>
-<input type="button" id="back" value="init" style= 'position:absolute; top:20px;left:270px;width: 35px; zindex:2'>
-<input type="button" id="plus" value="+" style= 'position:absolute; top:20px;left:710px;width: 26px; zindex:2'>
-<input type="button" id="minus" value="-" style= 'position:absolute; top:50px;left:710px;width: 26px; zindex:2'>
+<button id="plusnode"  style= 'position:absolute; top:150px;left:170px; zindex:2'>+ nodo</button>
+<input type="button" id="arrow" value="->" style= 'position:absolute; top:120px;left:170px;width: 26px; zindex:2'>
+<input type="button" id="back" value="init" style= 'position:absolute; top:20px;left:170px;width: 35px; zindex:2'>
+<input type="button" id="plus" value="+" style= 'position:absolute; top:50px;left:170px;width: 26px; zindex:2'>
+<input type="button" id="minus" value="-" style= 'position:absolute; top:80px;left:170px;width: 26px; zindex:2'>
 
 
 <div id="dialog-form" title="Crear nuevo enlace">
