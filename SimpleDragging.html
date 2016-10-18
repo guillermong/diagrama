@@ -389,7 +389,7 @@ function canvasApp() {
 	//BOTON LISTENER  ******* DESACTIVAR EN CASOS ESPECIALES
 	function ButtonkeyListener(evt){
 		 var keyCode = evt.which;
-		 if(keyCode == 46 || keyCode == 8){
+		 if(keyCode == 46 ){
 			if(tipeselect == 1)
 				$(".eliminar-titulo").html("Eliminar Nodo:"+ dragIndex);
 			else if(tipeselect == 2)
@@ -397,6 +397,9 @@ function canvasApp() {
 			
 			$( "#dialog-confirm" ).dialog("open");
 		 }
+		 
+		 if(keyCode == 36)
+			console.log(Nodos);
 			
 		
 	}
@@ -757,11 +760,7 @@ function canvasApp() {
 
 	document.getElementById("listnodo").addEventListener("click", function(e){
 		if(e.target && e.target.nodeName == "A") {
-			
-			//translatePos.x = evt.clientX - startDragOffset.x;
-            //translatePos.y = evt.clientY - startDragOffset.y;
-			//((evt.clientX - bRect.left)*(theCanvas.width/bRect.width) - panX)/ scale;			
-			
+
 			panX = theCanvas.width/2 -Nodos[e.target.id].x*scale;	
 			panY = theCanvas.height/2 -Nodos[e.target.id].y*scale;
 			translatePos.x =panX;
@@ -907,6 +906,28 @@ function canvasApp() {
 }
 } );
 
+//http://www.w3schools.com/howto/howto_js_filter_lists.asp
+function filtrarlista(){
+
+	var input, filter, ul, li, a, i;
+    input = document.getElementById("buscarnodo");
+    filter = input.value.toUpperCase();
+    ul = document.getElementById("listnodo");
+    li = ul.getElementsByTagName("li");
+    for (i = 0; i < li.length; i++) {
+        a = li[i].getElementsByTagName("a")[0];
+        if (a.innerHTML.toUpperCase().indexOf(filter) > -1) {
+            li[i].style.display = "";
+        } else {
+            li[i].style.display = "none";
+
+        }
+    }
+
+
+}
+
+
 </script>
 
 <style>
@@ -937,7 +958,8 @@ Your browser does not support HTML5 canvas.
 <input type="button" id="minus" value="-" style= 'position:absolute; top:80px;left:170px;width: 26px; zindex:2'>
 
 <div class="leyenda">
-LEYENDA
+LEYENDA<br>
+<input type="text" id="buscarnodo" onkeyup="filtrarlista()" placeholder="filtrar nodo..." title="">
 	<ul id="listnodo" >
 
 	</ul>
