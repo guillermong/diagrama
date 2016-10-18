@@ -101,6 +101,7 @@ function canvasApp() {
 	
 	var arrowrep;
 
+	var ul = document.getElementById("listnodo");
 	
 	init();
 	
@@ -165,7 +166,9 @@ function canvasApp() {
 							
 						};
 			Nodos[tmpid]= tempShape;
-		}		
+			
+		}
+	actualizarLista();		
 	}
 	//MOUSE MOVE LISTENER
 	function mouseMove(evt){
@@ -177,9 +180,26 @@ function canvasApp() {
 		document.getElementById("position").innerHTML = "position: ("+ Math.round( mouseX )+ "," 
 								+ Math.round( mouseY )+") Nodo:"+dragIndex + " tmparrow:"+ 
 								tmparrow +"<br>tipeselect:" + tipeselect
-								+"<br>dragging:" + dragging +"<br>screen:" + screen;
+								+"<br>dragging:" + dragging +"<br>screen:" + screen
+								+ "<br> panX:"+ panX + "<br> panY:"+panY 
+								+ "<br> translatePos.x:"+ translatePos.x + "<br> translatePos.y:"+translatePos.y
+								+ "<br> Scale:"+scale;
 		drawScreen();
-	
+		
+		
+		//VERIFICAR SI CLICK EN NODO
+		var highestIndex = -1;
+		for (var i in Nodos) {
+			if	(hitTest(Nodos[i], mouseX, mouseY)) {
+				if (i > highestIndex) {
+					highestIndex = i;
+				}
+			}
+		}
+		if(highestIndex != -1)
+			document.getElementById("nombre-nodo").innerHTML = "nombre Nodo:"+ Nodos[highestIndex].name;
+		else 
+			document.getElementById("nombre-nodo").innerHTML = "nombre Nodo: Undefined";
 	}
 	//MOUSE DOWN LISTENER
 	function mouseDownListener(evt) {
@@ -204,6 +224,7 @@ function canvasApp() {
 		
 		if(highestIndex == -1){
 			for(i=0; i < data_arrows.arrow.length; i++){
+				if(Nodos[data_arrows.arrow[i].to] && Nodos[data_arrows.arrow[i].from]){
 					var fromx = Nodos[data_arrows.arrow[i].from].x;
 					var fromy = Nodos[data_arrows.arrow[i].from].y;
 					var tox = Nodos[data_arrows.arrow[i].to].x;
@@ -268,6 +289,7 @@ function canvasApp() {
 						tmparrow = i;
 						tipeselect=2;
 					}
+				}
 			}
 		}
 		
@@ -367,7 +389,6 @@ function canvasApp() {
 	//BOTON LISTENER  ******* DESACTIVAR EN CASOS ESPECIALES
 	function ButtonkeyListener(evt){
 		 var keyCode = evt.which;
-		 //console.log(evt, keyCode, evt.which)
 		 if(keyCode == 46 || keyCode == 8){
 			if(tipeselect == 1)
 				$(".eliminar-titulo").html("Eliminar Nodo:"+ dragIndex);
@@ -529,6 +550,24 @@ function canvasApp() {
 			
 	}
 	
+	function actualizarLista(){
+		
+		ul.innerHTML = "";
+		for (var key in Nodos) {
+			if(key != "mouse"){
+				var li = document.createElement("li");
+				var a =  document.createElement("a");
+				a.setAttribute("href", "#"); 
+				a.setAttribute("id", key); 
+				//a.setAttribute("onclick", "focusnodo("+key+")");
+				a.appendChild(document.createTextNode(Nodos[key].name)); 
+				li.appendChild(a);
+				li.setAttribute("id", key);
+				ul.appendChild(li);
+			}
+		}
+	}
+
 	//MOVER SCREEN
 	function drawScreen() {
 		//bg
@@ -538,7 +577,6 @@ function canvasApp() {
 		context.fillStyle = "#FFFFFF";
 		context.fillRect(0,0,theCanvas.width,theCanvas.height);
 		context.translate(panX, panY);
-		//context.translate(translatePos.x, translatePos.y);  //SET TRANSLATE
 		context.scale(scale, scale);  //SET SCALE
 		drawArrows();
 		drawNodos();
@@ -587,71 +625,73 @@ function canvasApp() {
 		}else
 		{
 					//AQUIIIII COMPROBAR FLECHAS
-					for(i=0; i < data_arrows.arrow.length; i++){
-					var fromx = Nodos[data_arrows.arrow[i].from].x;
-					var fromy = Nodos[data_arrows.arrow[i].from].y;
-					var tox = Nodos[data_arrows.arrow[i].to].x;
-					var toy = Nodos[data_arrows.arrow[i].to].y;
-					
-					if(Nodos[data_arrows.arrow[i].from].x == Nodos[data_arrows.arrow[i].to].x && Nodos[data_arrows.arrow[i].from].y == Nodos[data_arrows.arrow[i].to].y){
-					
-						var dx = -1;		//DIRECCION X
-						var dy = +1;		//DIRECCION Y
+			for(i=0; i < data_arrows.arrow.length; i++){
+						if(Nodos[data_arrows.arrow[i].to] && Nodos[data_arrows.arrow[i].from]){
+						var fromx = Nodos[data_arrows.arrow[i].from].x;
+						var fromy = Nodos[data_arrows.arrow[i].from].y;
+						var tox = Nodos[data_arrows.arrow[i].to].x;
+						var toy = Nodos[data_arrows.arrow[i].to].y;
 						
-						var dx1 = +1;		//DIRECCION X
-						var dy1 = +1;		//DIRECCION Y
-						var angle = Math.atan2(dy1,dx1); //ANGULO P1 A P2
+						if(Nodos[data_arrows.arrow[i].from].x == Nodos[data_arrows.arrow[i].to].x && Nodos[data_arrows.arrow[i].from].y == Nodos[data_arrows.arrow[i].to].y){
 						
+							var dx = -1;		//DIRECCION X
+							var dy = +1;		//DIRECCION Y
+							
+							var dx1 = +1;		//DIRECCION X
+							var dy1 = +1;		//DIRECCION Y
+							var angle = Math.atan2(dy1,dx1); //ANGULO P1 A P2
+							
+							
+							//var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+							var scale0 = Math.sqrt((dx*dx) + (dy*dy));
+							var fromx_norm= dx/scale0;
+							var fromy_norm= dy/scale0;
+							fromx = fromx+(fromx_norm*20);
+							fromy =fromy+(fromy_norm*20);
+							//var scale1 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+							var scale1 = Math.sqrt((dx1*dx1) + (dy1*dy1));
+							var fromx_norm1= dx1/scale1;
+							var fromy_norm1= dy1/scale1;
+							tox = tox+(fromx_norm1*20);
+							toy =toy+(fromy_norm1*20);
 						
-						//var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
-						var scale0 = Math.sqrt((dx*dx) + (dy*dy));
-						var fromx_norm= dx/scale0;
-						var fromy_norm= dy/scale0;
-						fromx = fromx+(fromx_norm*20);
-						fromy =fromy+(fromy_norm*20);
-						//var scale1 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
-						var scale1 = Math.sqrt((dx1*dx1) + (dy1*dy1));
-						var fromx_norm1= dx1/scale1;
-						var fromy_norm1= dy1/scale1;
-						tox = tox+(fromx_norm1*20);
-						toy =toy+(fromy_norm1*20);
-					
-						distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx-80,  fromy+60, tox+80,  toy+60,  tox,  toy);			
-					}else{
-					
-						var dx = tox-fromx;		//DIRECCION X
-						var dy = toy-fromy;		//DIRECCION Y
-						var angle = Math.atan2(dy,dx); //ANGULO P1 A P2
-						
-						
-						//FROMMMMM
-						var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
-						//var scale = Math.sqrt((dx*dx) + (dy*dy));
-						var fromx_norm= dx/scale0;
-						var fromy_norm= dy/scale0;
-						
-						var scale1 = Math.sqrt(((fromx-tox)*(fromx-tox)) + ((fromy-toy)*(fromy-toy)));
-						var tox_norm= (fromx-tox)/scale1;
-						var toy_norm= (fromy-toy)/scale1;
-						
-						if(data_arrows.arrow[i].to != "mouse"){
-						fromx = fromx+(fromx_norm*20);
-						fromy =fromy+(fromy_norm*20);
-						tox = tox+(tox_norm*20);
-						toy = toy+(toy_norm*20);
+							distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx-80,  fromy+60, tox+80,  toy+60,  tox,  toy);			
 						}else{
-							fromx = fromx+(fromx_norm);
-							fromy =fromy+(fromy_norm);
-							tox = tox+(tox_norm);
-							toy = toy+(toy_norm);
+						
+							var dx = tox-fromx;		//DIRECCION X
+							var dy = toy-fromy;		//DIRECCION Y
+							var angle = Math.atan2(dy,dx); //ANGULO P1 A P2
+							
+							
+							//FROMMMMM
+							var scale0 = Math.sqrt(((tox-fromx)*(tox-fromx)) + ((toy-fromy)*(toy-fromy)));
+							//var scale = Math.sqrt((dx*dx) + (dy*dy));
+							var fromx_norm= dx/scale0;
+							var fromy_norm= dy/scale0;
+							
+							var scale1 = Math.sqrt(((fromx-tox)*(fromx-tox)) + ((fromy-toy)*(fromy-toy)));
+							var tox_norm= (fromx-tox)/scale1;
+							var toy_norm= (fromy-toy)/scale1;
+							
+							if(data_arrows.arrow[i].to != "mouse"){
+							fromx = fromx+(fromx_norm*20);
+							fromy =fromy+(fromy_norm*20);
+							tox = tox+(tox_norm*20);
+							toy = toy+(toy_norm*20);
+							}else{
+								fromx = fromx+(fromx_norm);
+								fromy =fromy+(fromy_norm);
+								tox = tox+(tox_norm);
+								toy = toy+(toy_norm);
+							}
+							distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx,  fromy, tox,  toy,  tox,  toy);
 						}
-						distance = getClosestPointToCubicBezier( mouseX,  mouseY,  100,  fromx, fromy,  fromx,  fromy, tox,  toy,  tox,  toy);
-					}
-					if(distance < 5 && i > highestIndex ){
-						highestIndex =i;
-						tmparrow = i;
-						tipeselect=2;
-					}
+						if(distance < 5 && i > highestIndex ){
+							highestIndex =i;
+							tmparrow = i;
+							tipeselect=2;
+						}
+						}
 			}
 			if(highestIndex == -1)
 				new_node();
@@ -697,6 +737,7 @@ function canvasApp() {
 		drawScreen();
 	}, false);
 	
+	
 	document.getElementById("arrow").addEventListener("click", function(){
 		if(dragIndex){
 			if(!isarrow){
@@ -713,7 +754,26 @@ function canvasApp() {
 			
 	}, false);
 	
-	
+
+	document.getElementById("listnodo").addEventListener("click", function(e){
+		if(e.target && e.target.nodeName == "A") {
+			
+			//translatePos.x = evt.clientX - startDragOffset.x;
+            //translatePos.y = evt.clientY - startDragOffset.y;
+			//((evt.clientX - bRect.left)*(theCanvas.width/bRect.width) - panX)/ scale;			
+			
+			panX = theCanvas.width/2 -Nodos[e.target.id].x*scale;	
+			panY = theCanvas.height/2 -Nodos[e.target.id].y*scale;
+			translatePos.x =panX;
+			translatePos.y =panY;
+			
+			tipeselect = 1;
+			dragIndex = e.target.id;
+            drawSelectedNode();
+			
+			
+        }
+	}, false);
 	
 	//CREAR ARROW 
 	function arrowNodo(evt){
@@ -735,16 +795,6 @@ function canvasApp() {
 	function new_node(){
 	
 		alert("nuevo Nodo: "+new_id);
-
-		/*
-		Nodos = [];
-		dataset.nodos.push({
-			  "id": new_id,"name": "nodo"+new_id,"position": {"x": mouseX, "y": mouseY},"primero": 0
-		});
-		//makeNodos();
-		*/
-		
-		
 		
 		tempX = mouseX;
 		tempY = mouseY;
@@ -766,7 +816,7 @@ function canvasApp() {
 		Nodos[tmpid]= tempShape;
 		dragIndex = tmpid;
 		new_id++;
-		
+		actualizarLista();
 		drawScreen();
 		drawSelectedNode();
 		
@@ -836,8 +886,9 @@ function canvasApp() {
 					  }else if(tipeselect == 2){
 						data_arrows.arrow.splice(tmparrow,1);
 						tmparrow = undefined;
+						
 					  }
-					  
+					  actualizarLista();
 					  drawScreen();
 					  $( this ).dialog( "close" );
 					  
@@ -858,6 +909,19 @@ function canvasApp() {
 
 </script>
 
+<style>
+
+.leyenda {
+	position: absolute;
+    top: 8px;
+    right: 16px;
+    font-size: 18px;
+}
+
+
+</style>
+
+
 </head>
 <body>
 <div style="top: 50px; text-align:center">
@@ -871,6 +935,13 @@ Your browser does not support HTML5 canvas.
 <input type="button" id="back" value="init" style= 'position:absolute; top:20px;left:170px;width: 35px; zindex:2'>
 <input type="button" id="plus" value="+" style= 'position:absolute; top:50px;left:170px;width: 26px; zindex:2'>
 <input type="button" id="minus" value="-" style= 'position:absolute; top:80px;left:170px;width: 26px; zindex:2'>
+
+<div class="leyenda">
+LEYENDA
+	<ul id="listnodo" >
+
+	</ul>
+</div>
 
 
 <div id="dialog-form" title="Crear nuevo enlace">
@@ -887,6 +958,10 @@ Your browser does not support HTML5 canvas.
 
 <div id="dialog-confirm" title="Empty the recycle bin?">
   <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span><p class = "eliminar-titulo">ELIMINAR FLECHA???</p></p>
+</div>
+
+<div id="nombre-nodo">
+	Nombre nodo: Undefined
 </div>
 
 </div>
